@@ -1,0 +1,3 @@
+openai:
+  key: sk-unknown
+  host: https://api.openai-proxy.com
