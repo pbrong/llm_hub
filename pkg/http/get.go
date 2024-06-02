@@ -2,8 +2,8 @@ package http
 
 import (
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"io/ioutil"
-	"log"
 	"net/http"
 )
 
@@ -23,7 +23,7 @@ func GetWithHeader(url string, queryMap map[string]interface{}, headers map[stri
 	resp, err := client.Do(req)
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
-	log.Printf("get with header, url = %v, response = %v", url, string(body))
+	logrus.Infof("get with header, url = %v, response = %v", url, string(body))
 	if err != nil {
 		return nil, err
 	}

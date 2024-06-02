@@ -1,9 +1,9 @@
 package http
 
 import (
+	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"llm_hub/pkg/json"
-	"log"
 	"net/http"
 	"strings"
 )
@@ -21,7 +21,7 @@ func PostWithHeader(url string, bodyMap map[string]interface{}, headers map[stri
 	resp, err := client.Do(req)
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
-	log.Printf("post with header, url = %v, request = %v, response = %v", url, json.SafeDump(bodyMap), string(body))
+	logrus.Infof("post with header, url = %v, request = %v, response = %v", url, json.SafeDump(bodyMap), string(body))
 
 	if err != nil {
 		return body, err
