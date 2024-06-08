@@ -13,7 +13,7 @@ const (
 	CompletionsURL = "/v1/chat/completions"
 
 	// 可用模型
-	Gpt35TurboModel = "gpt-3.5-turbo"
+	Gpt35TurboModel = "gpt-3.5-turbo-0125"
 )
 
 type gptLLMCaller struct {
