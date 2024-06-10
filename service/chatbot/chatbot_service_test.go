@@ -6,7 +6,6 @@ import (
 	"llm_hub/conf"
 	"llm_hub/module/chatbot"
 	"testing"
-	"time"
 )
 
 func Test_chatBotServiceV1_Chat(t *testing.T) {
@@ -25,6 +24,5 @@ func Test_chatBotServiceV1_Chat(t *testing.T) {
 		output, err := chatbotService.Chat(ctx, consult)
 		require.Nil(t, err)
 		t.Logf("用户咨询%v:%v\n机器人回答:%v", idx+1, consult, output)
-		time.Sleep(time.Minute)
 	}
 }
