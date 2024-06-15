@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/tmc/langchaingo/agents"
+	"github.com/tmc/langchaingo/callbacks"
 	"github.com/tmc/langchaingo/chains"
 	"github.com/tmc/langchaingo/embeddings"
 	"github.com/tmc/langchaingo/llms"
@@ -10,6 +12,8 @@ import (
 	"github.com/tmc/langchaingo/memory"
 	"github.com/tmc/langchaingo/prompts"
 	"github.com/tmc/langchaingo/schema"
+	"github.com/tmc/langchaingo/tools"
+	"github.com/tmc/langchaingo/tools/wikipedia"
 	"github.com/tmc/langchaingo/vectorstores"
 	"github.com/tmc/langchaingo/vectorstores/redisvector"
 	"llm_hub/conf"
@@ -40,34 +44,112 @@ func main() {
 	// 顺序链
 	//sequenceChains(ctx)
 
-	// embedding生成、存储及检索
-	embeddingRecall(ctx)
+	// embedding生成
+	//embeddingCreate(ctx)
+
+	// rag检索增强生成
+	//embeddingRag(ctx)
+
+	// agent使用：数学工具以及搜索
+	//agent_math_and_search(ctx)
+
+	// 自定义agent
+	agent_diy(ctx)
 }
 
-func embeddingRecall(ctx context.Context) {
-	// embedding生成测试
+type randomNumberTool struct{}
+
+func (r randomNumberTool) Name() string {
+	return "随机数计算工具"
+}
+
+func (r randomNumberTool) Description() string {
+	return "用于获取随机数"
+}
+
+func (r randomNumberTool) Call(ctx context.Context, input string) (string, error) {
+	return "1024", nil
+}
+
+func agent_diy(ctx context.Context) {
 	llm, err := openai.New(
-		openai.WithEmbeddingModel("text-embedding-3-large"),
-		openai.WithBaseURL("https://gtapi.xiaoerchaoren.com:8932/v1"),
+		openai.WithModel("gpt-3.5-turbo"),
+		openai.WithBaseURL(conf.LLMHubConfig.Openai.Host),
 		openai.WithToken(conf.LLMHubConfig.Openai.Key),
 	)
 	if err != nil {
 		log.Fatal(err)
 	}
-	vectors, err := llm.CreateEmbedding(ctx, []string{"chatgpt-3.5", "chatgpt-3.5-turbo"})
+
+	agentTools := []tools.Tool{
+		randomNumberTool{},
+	}
+	agent := agents.NewOneShotAgent(llm, agentTools)
+	executor := agents.NewExecutor(
+		agent,
+		agentTools,
+		agents.WithCallbacksHandler(callbacks.LogHandler{}),
+	)
+	result, err := chains.Run(ctx, executor, "告诉我一个随机数")
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(len(vectors))
+	fmt.Println(result)
+}
 
-	// 创建
+func agent_math_and_search(ctx context.Context) {
+	llm, err := openai.New(
+		openai.WithModel("gpt-3.5-turbo"),
+		openai.WithBaseURL(conf.LLMHubConfig.Openai.Host),
+		openai.WithToken(conf.LLMHubConfig.Openai.Key),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	wikiTool := wikipedia.New("test")
+	agentTools := []tools.Tool{
+		tools.Calculator{},
+		wikiTool,
+	}
+	agent := agents.NewOneShotAgent(llm, agentTools)
+	executor := agents.NewExecutor(
+		agent,
+		agentTools,
+		agents.WithCallbacksHandler(callbacks.LogHandler{}),
+	)
+	// 计算
+	result, err := chains.Run(ctx, executor, "计算1024除以2并加1024的结果")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(result)
+	// 搜索
+	result, err = chains.Run(ctx, executor, "今天的日期以及中国在去年今天发生了什么大事")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(result)
+}
+
+func embeddingRag(ctx context.Context) {
+	// embedding生成测试
+	llm, err := openai.New(
+		openai.WithEmbeddingModel("text-embedding-ada-002"),
+		openai.WithBaseURL(conf.LLMHubConfig.Openai.Host),
+		openai.WithToken(conf.LLMHubConfig.Openai.Key),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// 创建embedder
 	openAiEmbedder, err := embeddings.NewEmbedder(llm)
 	if err != nil {
 		log.Fatal(err)
 	}
 	// 基于redis存储向量
 	redisStore, err := redisvector.New(ctx,
-		redisvector.WithConnectionURL("redis://127.0.0.1:6379"),
+		redisvector.WithConnectionURL(conf.LLMHubConfig.Redis.Url),
 		redisvector.WithIndexName("test_vector_idx", true),
 		redisvector.WithEmbedder(openAiEmbedder),
 	)
@@ -102,10 +184,27 @@ func embeddingRecall(ctx context.Context) {
 	fmt.Println(result)
 }
 
+func embeddingCreate(ctx context.Context) {
+	// embedding生成测试
+	llm, err := openai.New(
+		openai.WithEmbeddingModel("text-embedding-ada-002"),
+		openai.WithBaseURL(conf.LLMHubConfig.Openai.Host),
+		openai.WithToken(conf.LLMHubConfig.Openai.Key),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	vectors, err := llm.CreateEmbedding(ctx, []string{"chatgpt-3.5"})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(vectors)
+}
+
 func llmChains(ctx context.Context) {
 	llm, err := openai.New(
 		openai.WithModel("gpt-4o"),
-		openai.WithBaseURL("https://gtapi.xiaoerchaoren.com:8932/v1"),
+		openai.WithBaseURL(conf.LLMHubConfig.Openai.Host),
 		openai.WithToken(conf.LLMHubConfig.Openai.Key),
 	)
 	if err != nil {
@@ -155,7 +254,7 @@ func routerChains(ctx context.Context) {
 func sequenceChains(ctx context.Context) {
 	llm, err := openai.New(
 		openai.WithModel("gpt-4o"),
-		openai.WithBaseURL("https://gtapi.xiaoerchaoren.com:8932/v1"),
+		openai.WithBaseURL(conf.LLMHubConfig.Openai.Host),
 		openai.WithToken(conf.LLMHubConfig.Openai.Key),
 	)
 	if err != nil {
@@ -194,7 +293,7 @@ func sequenceChains(ctx context.Context) {
 func conversationMemory(ctx context.Context) {
 	llm, err := openai.New(
 		openai.WithModel("gpt-4o"),
-		openai.WithBaseURL("https://gtapi.xiaoerchaoren.com:8932/v1"),
+		openai.WithBaseURL(conf.LLMHubConfig.Openai.Host),
 		openai.WithToken(conf.LLMHubConfig.Openai.Key),
 	)
 	if err != nil {
@@ -227,7 +326,7 @@ func conversationMemory(ctx context.Context) {
 func promptWithRoleJSON(ctx context.Context) {
 	llm, err := openai.New(
 		openai.WithModel("gpt-4o"),
-		openai.WithBaseURL("https://gtapi.xiaoerchaoren.com:8932/v1"),
+		openai.WithBaseURL(conf.LLMHubConfig.Openai.Host),
 		openai.WithToken(conf.LLMHubConfig.Openai.Key),
 	)
 	if err != nil {
@@ -248,7 +347,7 @@ func promptWithRoleJSON(ctx context.Context) {
 func promptTemplate(ctx context.Context) {
 	llm, err := openai.New(
 		openai.WithModel("gpt-3.5-turbo"),
-		openai.WithBaseURL("https://gtapi.xiaoerchaoren.com:8932/v1"),
+		openai.WithBaseURL(conf.LLMHubConfig.Openai.Host),
 		openai.WithToken(conf.LLMHubConfig.Openai.Key),
 	)
 	if err != nil {

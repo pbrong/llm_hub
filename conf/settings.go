@@ -12,8 +12,12 @@ type OpenaiConfig struct {
 	Host string `json:"host"`
 }
 
+type RedisConfig struct {
+	Url string `json:"url"`
+}
 type Config struct {
 	Openai OpenaiConfig `json:"openai"`
+	Redis  RedisConfig  `json:"redis"`
 }
 
 func Init() error {
