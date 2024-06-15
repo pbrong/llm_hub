@@ -10,7 +10,7 @@ import (
 
 const (
 	// 请求路径
-	CompletionsURL = "/v1/chat/completions"
+	CompletionsURL = "/chat/completions"
 
 	// 可用模型
 	Gpt35TurboModel = "gpt-3.5-turbo"

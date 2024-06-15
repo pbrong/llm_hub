@@ -1,3 +1,5 @@
 openai:
   key: sk-unknown
-  host: https://api.openai-proxy.com
+  host: https://api.openai-proxy.com/v1
+redis:
+  url: redis://127.0.0.1:6379
